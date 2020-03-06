@@ -11,3 +11,4 @@ gen
 *.test
 *.out
 /event-exporter
+/main

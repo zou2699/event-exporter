@@ -89,7 +89,6 @@ func NewEventStore(kubeClient kubernetes.Interface, eventsInformer coreinformers
 
 	}
 
-
 	es := &EventStore{
 		kubeClient: kubeClient,
 	}
@@ -149,15 +148,16 @@ func prometheusEvent(event *corev1.Event) {
 
 	switch event.Type {
 	case "Normal":
-		counter, err = kubernetesNormalEventCounterVec.GetMetricWithLabelValues(
-			event.InvolvedObject.Kind,
-			event.InvolvedObject.Name,
-			event.InvolvedObject.Namespace,
-			event.Reason,
-			event.Source.Host,
-		)
+		glog.V(5).Infof("Normal event: event:%+v\n", event)
+		// counter, err = kubernetesNormalEventCounterVec.GetMetricWithLabelValues(
+		// 	event.InvolvedObject.Kind,
+		// 	event.InvolvedObject.Name,
+		// 	event.InvolvedObject.Namespace,
+		// 	event.Reason,
+		// 	event.Source.Host,
+		// )
 	case "Warning":
-		glog.Infof("Warning type event: event:%+v\n",event)
+		glog.Infof("Warning event: event:%+v\n", event)
 		counter, err = kubernetesWarningEventCounterVec.GetMetricWithLabelValues(
 			event.InvolvedObject.Kind,
 			event.InvolvedObject.Name,
@@ -165,7 +165,13 @@ func prometheusEvent(event *corev1.Event) {
 			event.Reason,
 			event.Source.Host,
 		)
+		if err != nil {
+			glog.Warning(err)
+		} else {
+			counter.Add(1)
+		}
 	case "Info":
+		glog.Infof("Info event: event:%+v\n", event)
 		counter, err = kubernetesInfoEventCounterVec.GetMetricWithLabelValues(
 			event.InvolvedObject.Kind,
 			event.InvolvedObject.Name,
@@ -173,7 +179,13 @@ func prometheusEvent(event *corev1.Event) {
 			event.Reason,
 			event.Source.Host,
 		)
+		if err != nil {
+			glog.Warning(err)
+		} else {
+			counter.Add(1)
+		}
 	default:
+		glog.Infof("Unknown event: event:%+v\n", event)
 		counter, err = kubernetesUnknownEventCounterVec.GetMetricWithLabelValues(
 			event.InvolvedObject.Kind,
 			event.InvolvedObject.Name,
@@ -181,11 +193,11 @@ func prometheusEvent(event *corev1.Event) {
 			event.Reason,
 			event.Source.Host,
 		)
-	}
-	if err != nil {
-		glog.Warning(err)
-	} else {
-		counter.Add(1)
+		if err != nil {
+			glog.Warning(err)
+		} else {
+			counter.Add(1)
+		}
 	}
 
 }
