@@ -33,7 +33,7 @@ func main() {
 	var wg sync.WaitGroup
 
 	clientset := loadConfig()
-	sharedInformer := informers.NewSharedInformerFactory(clientset, 5*time.Second)
+	sharedInformer := informers.NewSharedInformerFactory(clientset, 30*time.Minute)
 	eventInformer := sharedInformer.Core().V1().Events()
 
 	// eventStore
