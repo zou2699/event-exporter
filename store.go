@@ -122,7 +122,6 @@ func prometheusEvent(event *corev1.Event) {
 	switch event.Type {
 	case "Normal":
 		glog.V(3).Infof("Normal event: event:%+v\n", event)
-		fmt.Println(*eventLevel)
 		if *eventLevel == 1 {
 			counter, err = kubernetesNormalEventCounterVec.GetMetricWithLabelValues(
 				event.InvolvedObject.Kind,
