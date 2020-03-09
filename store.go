@@ -20,53 +20,33 @@ import (
 )
 
 var (
-	// Normal
-	kubernetesNormalEventCounterVec = prometheus.NewCounterVec(prometheus.CounterOpts{
-		Name: "kubernetes_event_normal_total",
-		Help: "Total number of normal events in the kubernetes cluster",
-	}, []string{
+	// labelNames
+	labelNames = []string{
 		"involved_object_kind",
 		"involved_object_name",
 		"involved_object_namespace",
 		"reason",
-		"source",
-	})
+		"source_component",
+		"source_host",
+	}
+
+	// Normal
+	kubernetesNormalEventCounterVec = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "kubernetes_event_normal_total",
+		Help: "Total number of normal events in the kubernetes cluster",
+	}, labelNames)
 
 	// Warning
 	kubernetesWarningEventCounterVec = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name: "kubernetes_event_warning_total",
 		Help: "Total number of warning events in the kubernetes cluster",
-	}, []string{
-		"involved_object_kind",
-		"involved_object_name",
-		"involved_object_namespace",
-		"reason",
-		"source",
-	})
-
-	// Info
-	kubernetesInfoEventCounterVec = prometheus.NewCounterVec(prometheus.CounterOpts{
-		Name: "kubernetes_event_info_total",
-		Help: "Total number of info events in the kubernetes cluster",
-	}, []string{
-		"involved_object_kind",
-		"involved_object_name",
-		"involved_object_namespace",
-		"reason",
-		"source",
-	})
+	}, labelNames)
 
 	// Unknown
 	kubernetesUnknownEventCounterVec = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name: "kubernetes_event_unknown_total",
 		Help: "Total number of unknown events in the kubernetes cluster",
-	}, []string{
-		"involved_object_kind",
-		"involved_object_name",
-		"involved_object_namespace",
-		"reason",
-		"source",
-	})
+	}, labelNames)
 )
 
 type EventStore struct {
@@ -81,13 +61,9 @@ type EventStore struct {
 }
 
 func NewEventStore(kubeClient kubernetes.Interface, eventsInformer coreinformers.EventInformer) *EventStore {
-	if *enablePrometheus {
-		prometheus.MustRegister(kubernetesNormalEventCounterVec)
-		prometheus.MustRegister(kubernetesWarningEventCounterVec)
-		prometheus.MustRegister(kubernetesInfoEventCounterVec)
-		prometheus.MustRegister(kubernetesUnknownEventCounterVec)
-
-	}
+	prometheus.MustRegister(kubernetesNormalEventCounterVec)
+	prometheus.MustRegister(kubernetesWarningEventCounterVec)
+	prometheus.MustRegister(kubernetesUnknownEventCounterVec)
 
 	es := &EventStore{
 		kubeClient: kubeClient,
@@ -139,23 +115,30 @@ func (es EventStore) deleteEvent(obj interface{}) {
 
 // prometheusEvent is called when an event is added or updated
 func prometheusEvent(event *corev1.Event) {
-	if !*enablePrometheus {
-		return
-	}
-
 	var counter prometheus.Counter
 	var err error
 
+	// Type of this event (Normal, Warning), new types could be added in the future
 	switch event.Type {
 	case "Normal":
-		glog.V(5).Infof("Normal event: event:%+v\n", event)
-		// counter, err = kubernetesNormalEventCounterVec.GetMetricWithLabelValues(
-		// 	event.InvolvedObject.Kind,
-		// 	event.InvolvedObject.Name,
-		// 	event.InvolvedObject.Namespace,
-		// 	event.Reason,
-		// 	event.Source.Host,
-		// )
+		glog.V(3).Infof("Normal event: event:%+v\n", event)
+		fmt.Println(*eventLevel)
+		if *eventLevel == 1 {
+			counter, err = kubernetesNormalEventCounterVec.GetMetricWithLabelValues(
+				event.InvolvedObject.Kind,
+				event.InvolvedObject.Name,
+				event.InvolvedObject.Namespace,
+				event.Reason,
+				event.Source.Component,
+				event.Source.Host,
+			)
+			if err != nil {
+				glog.Warning(err)
+			} else {
+				counter.Add(1)
+			}
+		}
+
 	case "Warning":
 		glog.Infof("Warning event: event:%+v\n", event)
 		counter, err = kubernetesWarningEventCounterVec.GetMetricWithLabelValues(
@@ -163,20 +146,7 @@ func prometheusEvent(event *corev1.Event) {
 			event.InvolvedObject.Name,
 			event.InvolvedObject.Namespace,
 			event.Reason,
-			event.Source.Host,
-		)
-		if err != nil {
-			glog.Warning(err)
-		} else {
-			counter.Add(1)
-		}
-	case "Info":
-		glog.Infof("Info event: event:%+v\n", event)
-		counter, err = kubernetesInfoEventCounterVec.GetMetricWithLabelValues(
-			event.InvolvedObject.Kind,
-			event.InvolvedObject.Name,
-			event.InvolvedObject.Namespace,
-			event.Reason,
+			event.Source.Component,
 			event.Source.Host,
 		)
 		if err != nil {
@@ -191,6 +161,7 @@ func prometheusEvent(event *corev1.Event) {
 			event.InvolvedObject.Name,
 			event.InvolvedObject.Namespace,
 			event.Reason,
+			event.Source.Component,
 			event.Source.Host,
 		)
 		if err != nil {

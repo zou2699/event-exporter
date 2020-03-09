@@ -25,42 +25,45 @@ import (
 	"k8s.io/client-go/util/homedir"
 )
 
-// addr tells us what address to have the Prometheus metrics listen on.
+// addr the Prometheus metrics listen on.
 var addr = flag.String("listen-address", ":9001", "The address to listen on for HTTP requests.")
-var enablePrometheus = flag.Bool("enable-prometheus", true, "enable prometheus metrics")
+// 0: just warning + unknown  1: All
+var eventLevel = flag.Int("event-level", 0, "event type 0: just warning and unknown  1: All")
 
 func main() {
 	var wg sync.WaitGroup
 
 	clientset := loadConfig()
-	sharedInformer := informers.NewSharedInformerFactory(clientset, 30 *time.Minute)
+	// sharedInformerFactory for all namespaces
+	sharedInformer := informers.NewSharedInformerFactory(clientset, 30*time.Minute)
+	// 获取 event informer
 	eventInformer := sharedInformer.Core().V1().Events()
 
-	// eventStore
+	// 实例化 eventStore
 	eventStore := NewEventStore(clientset, eventInformer)
+	// 信号handler
 	stopCh := sigHandler()
 
-	// prom
-	if *enablePrometheus {
-		go func() {
-			glog.Info("starting prometheus metrics")
-			http.Handle("/metrics", promhttp.Handler())
-			glog.Warning(http.ListenAndServe(*addr, nil))
-		}()
-	}
+	// 启动 prometheus
+	go func() {
+		glog.Info("starting prometheus metrics")
+		http.Handle("/metrics", promhttp.Handler())
+		glog.Warning(http.ListenAndServe(*addr, nil))
+	}()
 
+	// 启动 eventStore
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		eventStore.Run(stopCh)
 	}()
 
-	// Startup the Informer(s)
+	// Startup the sharedInformer
 	glog.Infof("Starting shared Informer")
 	sharedInformer.Start(stopCh)
+
 	wg.Wait()
 	glog.Warningf("Exiting main")
-	os.Exit(1)
 }
 
 func sigHandler() <-chan struct{} {
