@@ -16,13 +16,13 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/golang/glog"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
+	"k8s.io/klog"
 )
 
 // addr the Prometheus metrics listen on.
@@ -32,7 +32,7 @@ var eventLevel = flag.Int("event-level", 0, "event type 0: just warning and unkn
 
 func main() {
 	var wg sync.WaitGroup
-
+	klog.InitFlags(nil)
 	clientset := loadConfig()
 	// sharedInformerFactory for all namespaces
 	sharedInformer := informers.NewSharedInformerFactory(clientset, 30*time.Minute)
@@ -46,9 +46,9 @@ func main() {
 
 	// 启动 prometheus
 	go func() {
-		glog.Info("starting prometheus metrics")
+		klog.Info("starting prometheus metrics")
 		http.Handle("/metrics", promhttp.Handler())
-		glog.Warning(http.ListenAndServe(*addr, nil))
+		klog.Warning(http.ListenAndServe(*addr, nil))
 	}()
 
 	// 启动 eventStore
@@ -59,11 +59,11 @@ func main() {
 	}()
 
 	// Startup the sharedInformer
-	glog.Infof("Starting shared Informer")
+	klog.Infof("Starting shared Informer")
 	sharedInformer.Start(stopCh)
 
 	wg.Wait()
-	glog.Warningf("Exiting main")
+	klog.Warningf("Exiting main")
 }
 
 func sigHandler() <-chan struct{} {
@@ -78,7 +78,7 @@ func sigHandler() <-chan struct{} {
 			syscall.SIGILL,  // illegal instruction
 			syscall.SIGFPE) // floating point - this is why we can't have nice things
 		sig := <-c
-		glog.Warningf("Signal (%v) Detected, Shutting Down", sig)
+		klog.Warningf("Signal (%v) Detected, Shutting Down", sig)
 		close(stopCh)
 	}()
 	return stopCh

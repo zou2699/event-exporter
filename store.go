@@ -9,7 +9,6 @@ package main
 import (
 	"fmt"
 
-	"github.com/golang/glog"
 	"github.com/prometheus/client_golang/prometheus"
 	corev1 "k8s.io/api/core/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -17,6 +16,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	corelisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/klog"
 )
 
 var (
@@ -82,8 +82,8 @@ func NewEventStore(kubeClient kubernetes.Interface, eventsInformer coreinformers
 func (es *EventStore) Run(stopCh <-chan struct{}) {
 	// 处理 panic
 	defer utilruntime.HandleCrash()
-	defer glog.Infof("shutting down eventStore")
-	glog.Info("starting eventStore")
+	defer klog.Infof("shutting down eventStore")
+	klog.Info("starting eventStore")
 
 	if !cache.WaitForCacheSync(stopCh, es.eventListerSynced) {
 		utilruntime.HandleError(fmt.Errorf("time out waiting for caches to sync"))
@@ -96,7 +96,7 @@ func (es *EventStore) Run(stopCh <-chan struct{}) {
 func (es EventStore) addEvent(obj interface{}) {
 	event := obj.(*corev1.Event)
 	prometheusEvent(event)
-	// glog.Infof("addEvent: %+v\n", event)
+	// klog.Infof("addEvent: %+v\n", event)
 }
 
 // updateEvent is called any time there is an update to an existing event
@@ -104,13 +104,13 @@ func (es EventStore) updateEvent(objOld interface{}, objNew interface{}) {
 	// eventOld := objOld.(*corev1.Event)
 	eventNew := objNew.(*corev1.Event)
 	prometheusEvent(eventNew)
-	// glog.Infof("updateEvent: eventOld: %+v \t eventNew: %+v\n", eventOld, eventNew)
+	// klog.Infof("updateEvent: eventOld: %+v \t eventNew: %+v\n", eventOld, eventNew)
 }
 
 // deleteEvent should only occur when the system garbage collects events via TTL expiration
 func (es EventStore) deleteEvent(obj interface{}) {
 	event := obj.(*corev1.Event)
-	glog.V(5).Infof("deleteEvent: %v\n", event)
+	klog.V(5).Infof("deleteEvent: %v\n", event)
 }
 
 // prometheusEvent is called when an event is added or updated
@@ -121,7 +121,7 @@ func prometheusEvent(event *corev1.Event) {
 	// Type of this event (Normal, Warning), new types could be added in the future
 	switch event.Type {
 	case "Normal":
-		glog.V(3).Infof("Normal event: event:%+v\n", event)
+		klog.V(3).Infof("Normal event: event:%+v\n", event)
 		if *eventLevel == 1 {
 			counter, err = kubernetesNormalEventCounterVec.GetMetricWithLabelValues(
 				event.InvolvedObject.Kind,
@@ -132,14 +132,14 @@ func prometheusEvent(event *corev1.Event) {
 				event.Source.Host,
 			)
 			if err != nil {
-				glog.Warning(err)
+				klog.Warning(err)
 			} else {
 				counter.Add(1)
 			}
 		}
 
 	case "Warning":
-		glog.Infof("Warning event: event:%+v\n", event)
+		klog.Infof("Warning event: event:%+v\n", event)
 		counter, err = kubernetesWarningEventCounterVec.GetMetricWithLabelValues(
 			event.InvolvedObject.Kind,
 			event.InvolvedObject.Name,
@@ -149,12 +149,12 @@ func prometheusEvent(event *corev1.Event) {
 			event.Source.Host,
 		)
 		if err != nil {
-			glog.Warning(err)
+			klog.Warning(err)
 		} else {
 			counter.Add(1)
 		}
 	default:
-		glog.Infof("Unknown event: event:%+v\n", event)
+		klog.Infof("Unknown event: event:%+v\n", event)
 		counter, err = kubernetesUnknownEventCounterVec.GetMetricWithLabelValues(
 			event.InvolvedObject.Kind,
 			event.InvolvedObject.Name,
@@ -164,7 +164,7 @@ func prometheusEvent(event *corev1.Event) {
 			event.Source.Host,
 		)
 		if err != nil {
-			glog.Warning(err)
+			klog.Warning(err)
 		} else {
 			counter.Add(1)
 		}

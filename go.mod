@@ -4,7 +4,6 @@ go 1.14
 
 require (
 	github.com/gogo/protobuf v1.3.1 // indirect
-	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
 	github.com/golang/protobuf v1.3.4 // indirect
 	github.com/google/gofuzz v1.1.0 // indirect
@@ -21,6 +20,7 @@ require (
 	k8s.io/api v0.0.0-20191004102349-159aefb8556b
 	k8s.io/apimachinery v0.0.0-20191004074956-c5d2f014d689
 	k8s.io/client-go v11.0.1-0.20191004102930-01520b8320fc+incompatible
+	k8s.io/klog v0.3.0
 	k8s.io/utils v0.0.0-20200229041039-0a110f9eb7ab // indirect
 	sigs.k8s.io/yaml v1.2.0 // indirect
 )
