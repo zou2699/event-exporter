@@ -93,14 +93,14 @@ func (es *EventStore) Run(stopCh <-chan struct{}) {
 }
 
 // addEvent is called when an event is created, or during the initial list
-func (es EventStore) addEvent(obj interface{}) {
+func (es *EventStore) addEvent(obj interface{}) {
 	event := obj.(*corev1.Event)
 	prometheusEvent(event)
 	// klog.Infof("addEvent: %+v\n", event)
 }
 
 // updateEvent is called any time there is an update to an existing event
-func (es EventStore) updateEvent(objOld interface{}, objNew interface{}) {
+func (es *EventStore) updateEvent(objOld interface{}, objNew interface{}) {
 	// eventOld := objOld.(*corev1.Event)
 	eventNew := objNew.(*corev1.Event)
 	prometheusEvent(eventNew)
@@ -108,7 +108,7 @@ func (es EventStore) updateEvent(objOld interface{}, objNew interface{}) {
 }
 
 // deleteEvent should only occur when the system garbage collects events via TTL expiration
-func (es EventStore) deleteEvent(obj interface{}) {
+func (es *EventStore) deleteEvent(obj interface{}) {
 	event := obj.(*corev1.Event)
 	klog.V(5).Infof("deleteEvent: %v\n", event)
 }
