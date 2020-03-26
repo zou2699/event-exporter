@@ -27,6 +27,7 @@ import (
 
 // addr the Prometheus metrics listen on.
 var addr = flag.String("listen-address", ":9001", "The address to listen on for HTTP requests.")
+
 // 0: just warning + unknown  1: All
 var eventLevel = flag.Int("event-level", 0, "event type 0: just warning and unknown  1: All")
 
@@ -35,7 +36,7 @@ func main() {
 	klog.InitFlags(nil)
 	clientset := loadConfig()
 	// sharedInformerFactory for all namespaces
-	sharedInformer := informers.NewSharedInformerFactory(clientset, 30*time.Minute)
+	sharedInformer := informers.NewSharedInformerFactory(clientset, 1*time.Hour)
 	// 获取 event informer
 	eventInformer := sharedInformer.Core().V1().Events()
 

@@ -101,9 +101,13 @@ func (es *EventStore) addEvent(obj interface{}) {
 
 // updateEvent is called any time there is an update to an existing event
 func (es *EventStore) updateEvent(objOld interface{}, objNew interface{}) {
-	// eventOld := objOld.(*corev1.Event)
-	eventNew := objNew.(*corev1.Event)
-	prometheusEvent(eventNew)
+	oldEvent:= objOld.(*corev1.Event)
+	newEvent := objNew.(*corev1.Event)
+	if oldEvent.ResourceVersion == newEvent.ResourceVersion {
+		klog.V(5).Infof("重复 event: %+v\n", newEvent)
+		return
+	}
+	prometheusEvent(newEvent)
 	// klog.Infof("updateEvent: eventOld: %+v \t eventNew: %+v\n", eventOld, eventNew)
 }
 
@@ -121,7 +125,7 @@ func prometheusEvent(event *corev1.Event) {
 	// Type of this event (Normal, Warning), new types could be added in the future
 	switch event.Type {
 	case "Normal":
-		klog.V(3).Infof("Normal event: event:%+v\n", event)
+		klog.V(2).Infof("Normal event: %+v\n", event)
 		if *eventLevel == 1 {
 			counter, err = kubernetesNormalEventCounterVec.GetMetricWithLabelValues(
 				event.InvolvedObject.Kind,
@@ -139,7 +143,7 @@ func prometheusEvent(event *corev1.Event) {
 		}
 
 	case "Warning":
-		klog.Infof("Warning event: event:%+v\n", event)
+		klog.Infof("Warning event: %+v\n", event)
 		counter, err = kubernetesWarningEventCounterVec.GetMetricWithLabelValues(
 			event.InvolvedObject.Kind,
 			event.InvolvedObject.Name,
@@ -154,7 +158,7 @@ func prometheusEvent(event *corev1.Event) {
 			counter.Add(1)
 		}
 	default:
-		klog.Infof("Unknown event: event:%+v\n", event)
+		klog.Infof("Unknown event: %+v\n", event)
 		counter, err = kubernetesUnknownEventCounterVec.GetMetricWithLabelValues(
 			event.InvolvedObject.Kind,
 			event.InvolvedObject.Name,
